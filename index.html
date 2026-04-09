@@ -165,6 +165,65 @@
       background: var(--tg-secondary-bg);
       margin: 4px 0 20px;
     }
+
+    /* Response display */
+    .response-box {
+      background: var(--tg-secondary-bg);
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      color: var(--tg-text);
+      margin-top: 12px;
+      min-height: 60px;
+      border-left: 3px solid var(--tg-btn);
+    }
+
+    .response-box.loading {
+      color: var(--tg-hint);
+      font-style: italic;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .response-box.error {
+      border-left-color: #ff4444;
+      color: #ff4444;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--tg-hint);
+      border-top-color: var(--tg-btn);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* History section */
+    .history-item {
+      background: var(--tg-secondary-bg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .history-item .query {
+      font-weight: 600;
+      color: var(--tg-text);
+      margin-bottom: 4px;
+    }
+
+    .history-item .response {
+      color: var(--tg-hint);
+      font-size: 11px;
+    }
   </style>
 </head>
 <body>
@@ -206,10 +265,31 @@
   <!-- SEND -->
   <button class="send-btn" id="sendBtn" disabled onclick="sendQuery()">Send</button>
 
+  <!-- RESPONSE -->
+  <div id="responseBox" style="display:none" class="response-box"></div>
+
+  <!-- HISTORY -->
+  <div id="historySection" style="display:none; margin-top: 20px;">
+    <div class="section-label">Recent queries</div>
+    <div id="history"></div>
+  </div>
+
   <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
+
+    // Extract user_id from Telegram initData
+    const initData = tg.initData;
+    const params = new URLSearchParams(initData);
+    const userStr = params.get('user');
+    const userId = userStr ? JSON.parse(userStr).id : null;
+
+    // ⚠️ UPDATE THIS with your backend URL ⚠️
+    const BACKEND_URL = "http://localhost:5000";  // Change this when deployed
+    // const BACKEND_URL = "https://your-backend.herokuapp.com";  // Example: deployed to Heroku
+
+    let queryHistory = [];
 
     // ── Config ── edit these to match your business ──────────────────────
     const REPORTS = [
@@ -331,11 +411,65 @@
       }
     }
 
-    function sendQuery() {
+    async function sendQuery() {
       const q = buildQuery();
-      if (!q) return;
-      // Send back to the bot as if the user typed it
-      tg.sendData(q);
+      if (!q || !userId) {
+        showResponse("Error: Could not extract user ID from Telegram", "error");
+        return;
+      }
+
+      // Show loading state
+      showResponse(`<div class="spinner"></div> Sending query...`, "loading");
+      const sendBtn = document.getElementById("sendBtn");
+      sendBtn.disabled = true;
+
+      try {
+        const response = await fetch(`${BACKEND_URL}/query`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: q, user_id: userId })
+        });
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+          showResponse(`📬 Bot responded:\n\n${data.response}`, "success");
+          addToHistory(q, data.response);
+        } else if (data.status === "timeout") {
+          showResponse("⏱️ No response from bot (timeout). Check your chat.", "error");
+          addToHistory(q, "No response (timeout)");
+        } else {
+          showResponse(`❌ Error: ${data.error}`, "error");
+          addToHistory(q, `Error: ${data.error}`);
+        }
+      } catch (err) {
+        showResponse(`❌ Connection error:\n${err.message}\n\nMake sure backend is running at: ${BACKEND_URL}`, "error");
+        addToHistory(q, `Error: ${err.message}`);
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    function showResponse(text, type = "success") {
+      const box = document.getElementById("responseBox");
+      box.innerHTML = text;
+      box.className = `response-box ${type}`;
+      box.style.display = "block";
+    }
+
+    function addToHistory(query, response) {
+      queryHistory.unshift({ q: query, r: response, time: new Date().toLocaleTimeString() });
+      if (queryHistory.length > 5) queryHistory.pop(); // Keep last 5
+
+      const historyDiv = document.getElementById("historySection");
+      const historyList = document.getElementById("history");
+      historyList.innerHTML = queryHistory.map(item => `
+        <div class="history-item">
+          <div class="query">🔍 ${item.q}</div>
+          <div class="response">${item.time} — ${item.r.substring(0, 60)}${item.r.length > 60 ? "..." : ""}</div>
+        </div>
+      `).join("");
+      historyDiv.style.display = "block";
     }
   </script>
 </body>
