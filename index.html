@@ -183,10 +183,16 @@
     <div class="period-grid" id="periodGrid"></div>
   </div>
 
-  <!-- OPTIONAL FILTER -->
+  <!-- SPORT FILTER -->
   <div class="section" id="filterSection" style="display:none">
-    <div class="section-label">Filter (optional)</div>
+    <div class="section-label">Sport</div>
     <div class="filter-row" id="filterGrid"></div>
+  </div>
+
+  <!-- MARKET FILTER -->
+  <div class="section" id="marketSection" style="display:none">
+    <div class="section-label">Market</div>
+    <div class="filter-row" id="marketGrid"></div>
   </div>
 
   <div class="divider"></div>
@@ -207,14 +213,9 @@
 
     // ── Config ── edit these to match your business ──────────────────────
     const REPORTS = [
-      { label: "P&L",           value: "profit and loss" },
-      { label: "Revenue",       value: "revenue" },
-      { label: "Expenses",      value: "expenses" },
-      { label: "Cash Flow",     value: "cash flow" },
-      { label: "Sales",         value: "sales summary" },
-      { label: "Gross Margin",  value: "gross margin" },
-      { label: "Receivables",   value: "accounts receivable" },
-      { label: "Inventory",     value: "inventory summary" },
+      { label: "S1",         value: "S1" },
+      { label: "Laystars",   value: "Laystars" },
+      { label: "Fairenter",  value: "Fairenter" },
     ];
 
     const PERIODS = [
@@ -229,18 +230,17 @@
       { label: "YTD",           value: "year to date" },
     ];
 
-    // Optional filters per report type (leave empty to hide filter section)
-    const FILTERS = {
-      "profit and loss":    ["All", "Operations", "Marketing", "R&D", "Admin"],
-      "revenue":            ["All", "Product A", "Product B", "Services"],
-      "expenses":           ["All", "COGS", "OpEx", "CapEx"],
-      "sales summary":      ["All", "Online", "Retail", "B2B"],
-    };
+    // Sport filter — applies to all reports
+    const FILTERS = ["Overall", "Soccer", "Cricket"];
+
+    // Market filter — applies to all reports
+    const MARKETS = ["All", "Market Odds", "Other Markets"];
     // ────────────────────────────────────────────────────────────────────
 
     let selectedReport = null;
     let selectedPeriod = null;
-    let selectedFilter = null;
+    let selectedFilter = "Overall";
+    let selectedMarket = null;
 
     // Render report chips
     const reportGrid = document.getElementById("reportGrid");
@@ -264,38 +264,41 @@
       periodGrid.appendChild(el);
     });
 
+    function renderFilterRow(containerId, items, defaultValue, onSelect) {
+      const grid = document.getElementById(containerId);
+      grid.innerHTML = "";
+      items.forEach(f => {
+        const fc = document.createElement("div");
+        fc.className = "filter-chip" + (f === defaultValue ? " selected" : "");
+        fc.textContent = f;
+        fc.onclick = () => {
+          grid.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("selected"));
+          fc.classList.add("selected");
+          onSelect(f);
+          updatePreview();
+        };
+        grid.appendChild(fc);
+      });
+    }
+
     function selectReport(r, el) {
       document.querySelectorAll(".chip").forEach(c => c.classList.remove("selected"));
       el.classList.add("selected");
       selectedReport = r.value;
-      selectedFilter = null;
+      selectedFilter = "Overall";
+      selectedMarket = null;
 
-      // Show filters if applicable
-      const filterSection = document.getElementById("filterSection");
-      const filterGrid = document.getElementById("filterGrid");
-      const filters = FILTERS[r.value];
+      // Render sport filter
+      renderFilterRow("filterGrid", FILTERS, "Overall", val => {
+        selectedFilter = val === "Overall" ? "Overall" : val;
+      });
+      document.getElementById("filterSection").style.display = "block";
 
-      if (filters && filters.length) {
-        filterGrid.innerHTML = "";
-        filters.forEach(f => {
-          const fc = document.createElement("div");
-          fc.className = "filter-chip" + (f === "All" ? " selected" : "");
-          fc.textContent = f;
-          if (f === "All") selectedFilter = null;
-          fc.onclick = () => {
-            document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("selected"));
-            fc.classList.add("selected");
-            selectedFilter = f === "All" ? null : f;
-            updatePreview();
-          };
-          filterGrid.appendChild(fc);
-        });
-        filterSection.style.display = "block";
-        // Default to "All"
-        filterGrid.firstChild.classList.add("selected");
-      } else {
-        filterSection.style.display = "none";
-      }
+      // Render market filter
+      renderFilterRow("marketGrid", MARKETS, "All", val => {
+        selectedMarket = val === "All" ? null : val;
+      });
+      document.getElementById("marketSection").style.display = "block";
 
       updatePreview();
     }
@@ -310,7 +313,8 @@
     function buildQuery() {
       if (!selectedReport || !selectedPeriod) return null;
       let q = `show me ${selectedReport} for ${selectedPeriod}`;
-      if (selectedFilter) q += ` — ${selectedFilter} only`;
+      if (selectedFilter && selectedFilter !== "Overall") q += ` [${selectedFilter}]`;
+      if (selectedMarket) q += ` [${selectedMarket}]`;
       return q;
     }
 
