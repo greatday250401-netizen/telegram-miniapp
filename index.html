@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Data Query</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --tg-bg: var(--tg-theme-bg-color, #ffffff);
+      --tg-text: var(--tg-theme-text-color, #222222);
+      --tg-hint: var(--tg-theme-hint-color, #999999);
+      --tg-btn: var(--tg-theme-button-color, #3390ec);
+      --tg-btn-text: var(--tg-theme-button-text-color, #ffffff);
+      --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #f1f1f1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--tg-bg);
+      color: var(--tg-text);
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--tg-text);
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--tg-hint);
+      margin-bottom: 8px;
+    }
+
+    .section { margin-bottom: 20px; }
+
+    /* Chip grid for query types */
+    .chip-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .chip {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1.5px solid transparent;
+      background: var(--tg-secondary-bg);
+      color: var(--tg-text);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .chip.selected {
+      background: var(--tg-btn);
+      color: var(--tg-btn-text);
+      border-color: var(--tg-btn);
+    }
+
+    /* Period pills */
+    .period-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pill {
+      padding: 7px 14px;
+      border-radius: 20px;
+      background: var(--tg-secondary-bg);
+      color: var(--tg-text);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .pill.selected {
+      background: var(--tg-btn);
+      color: var(--tg-btn-text);
+    }
+
+    /* Optional filter row */
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: var(--tg-secondary-bg);
+      color: var(--tg-text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .filter-chip.selected {
+      background: color-mix(in srgb, var(--tg-btn) 20%, transparent);
+      color: var(--tg-btn);
+      font-weight: 600;
+    }
+
+    /* Preview box */
+    .preview {
+      background: var(--tg-secondary-bg);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--tg-hint);
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    .preview span {
+      color: var(--tg-text);
+      font-style: italic;
+    }
+
+    /* Send button */
+    .send-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--tg-btn);
+      color: var(--tg-btn-text);
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.15s ease;
+    }
+
+    .send-btn:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .send-btn:active:not(:disabled) {
+      opacity: 0.85;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--tg-secondary-bg);
+      margin: 4px 0 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>What do you want to know?</h2>
+
+  <!-- REPORT TYPE -->
+  <div class="section">
+    <div class="section-label">Report</div>
+    <div class="chip-grid" id="reportGrid"></div>
+  </div>
+
+  <!-- TIME PERIOD -->
+  <div class="section">
+    <div class="section-label">Period</div>
+    <div class="period-grid" id="periodGrid"></div>
+  </div>
+
+  <!-- OPTIONAL FILTER -->
+  <div class="section" id="filterSection" style="display:none">
+    <div class="section-label">Filter (optional)</div>
+    <div class="filter-row" id="filterGrid"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- QUERY PREVIEW -->
+  <div class="section">
+    <div class="section-label">Query preview</div>
+    <div class="preview" id="preview">Select a report and period above</div>
+  </div>
+
+  <!-- SEND -->
+  <button class="send-btn" id="sendBtn" disabled onclick="sendQuery()">Send</button>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
+
+    // ── Config ── edit these to match your business ──────────────────────
+    const REPORTS = [
+      { label: "P&L",           value: "profit and loss" },
+      { label: "Revenue",       value: "revenue" },
+      { label: "Expenses",      value: "expenses" },
+      { label: "Cash Flow",     value: "cash flow" },
+      { label: "Sales",         value: "sales summary" },
+      { label: "Gross Margin",  value: "gross margin" },
+      { label: "Receivables",   value: "accounts receivable" },
+      { label: "Inventory",     value: "inventory summary" },
+    ];
+
+    const PERIODS = [
+      { label: "Today",         value: "today" },
+      { label: "Yesterday",     value: "yesterday" },
+      { label: "This Week",     value: "this week" },
+      { label: "Last Week",     value: "last week" },
+      { label: "This Month",    value: "this month" },
+      { label: "Last Month",    value: "last month" },
+      { label: "This Quarter",  value: "this quarter" },
+      { label: "Last Quarter",  value: "last quarter" },
+      { label: "YTD",           value: "year to date" },
+    ];
+
+    // Optional filters per report type (leave empty to hide filter section)
+    const FILTERS = {
+      "profit and loss":    ["All", "Operations", "Marketing", "R&D", "Admin"],
+      "revenue":            ["All", "Product A", "Product B", "Services"],
+      "expenses":           ["All", "COGS", "OpEx", "CapEx"],
+      "sales summary":      ["All", "Online", "Retail", "B2B"],
+    };
+    // ────────────────────────────────────────────────────────────────────
+
+    let selectedReport = null;
+    let selectedPeriod = null;
+    let selectedFilter = null;
+
+    // Render report chips
+    const reportGrid = document.getElementById("reportGrid");
+    REPORTS.forEach(r => {
+      const el = document.createElement("div");
+      el.className = "chip";
+      el.textContent = r.label;
+      el.dataset.value = r.value;
+      el.onclick = () => selectReport(r, el);
+      reportGrid.appendChild(el);
+    });
+
+    // Render period pills
+    const periodGrid = document.getElementById("periodGrid");
+    PERIODS.forEach(p => {
+      const el = document.createElement("div");
+      el.className = "pill";
+      el.textContent = p.label;
+      el.dataset.value = p.value;
+      el.onclick = () => selectPeriod(p, el);
+      periodGrid.appendChild(el);
+    });
+
+    function selectReport(r, el) {
+      document.querySelectorAll(".chip").forEach(c => c.classList.remove("selected"));
+      el.classList.add("selected");
+      selectedReport = r.value;
+      selectedFilter = null;
+
+      // Show filters if applicable
+      const filterSection = document.getElementById("filterSection");
+      const filterGrid = document.getElementById("filterGrid");
+      const filters = FILTERS[r.value];
+
+      if (filters && filters.length) {
+        filterGrid.innerHTML = "";
+        filters.forEach(f => {
+          const fc = document.createElement("div");
+          fc.className = "filter-chip" + (f === "All" ? " selected" : "");
+          fc.textContent = f;
+          if (f === "All") selectedFilter = null;
+          fc.onclick = () => {
+            document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("selected"));
+            fc.classList.add("selected");
+            selectedFilter = f === "All" ? null : f;
+            updatePreview();
+          };
+          filterGrid.appendChild(fc);
+        });
+        filterSection.style.display = "block";
+        // Default to "All"
+        filterGrid.firstChild.classList.add("selected");
+      } else {
+        filterSection.style.display = "none";
+      }
+
+      updatePreview();
+    }
+
+    function selectPeriod(p, el) {
+      document.querySelectorAll(".pill").forEach(c => c.classList.remove("selected"));
+      el.classList.add("selected");
+      selectedPeriod = p.value;
+      updatePreview();
+    }
+
+    function buildQuery() {
+      if (!selectedReport || !selectedPeriod) return null;
+      let q = `show me ${selectedReport} for ${selectedPeriod}`;
+      if (selectedFilter) q += ` — ${selectedFilter} only`;
+      return q;
+    }
+
+    function updatePreview() {
+      const q = buildQuery();
+      const preview = document.getElementById("preview");
+      const sendBtn = document.getElementById("sendBtn");
+      if (q) {
+        preview.innerHTML = `<span>${q}</span>`;
+        sendBtn.disabled = false;
+      } else {
+        preview.innerHTML = "Select a report and period above";
+        sendBtn.disabled = true;
+      }
+    }
+
+    function sendQuery() {
+      const q = buildQuery();
+      if (!q) return;
+      // Send back to the bot as if the user typed it
+      tg.sendData(q);
+    }
+  </script>
+</body>
+</html>
