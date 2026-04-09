@@ -283,7 +283,16 @@
     const initData = tg.initData;
     const params = new URLSearchParams(initData);
     const userStr = params.get('user');
-    const userId = userStr ? JSON.parse(userStr).id : null;
+    let userId = userStr ? JSON.parse(userStr).id : null;
+
+    // Fallback for testing (when opened in browser, not Telegram)
+    if (!userId) {
+      const urlParams = new URLSearchParams(window.location.search);
+      userId = urlParams.get('user_id') || prompt("Enter your Telegram user ID (or click Cancel for demo)");
+      if (!userId) {
+        userId = Math.floor(Math.random() * 900000000) + 100000000; // Random demo ID
+      }
+    }
 
     // ⚠️ UPDATE THIS with your backend URL ⚠️
     const BACKEND_URL = "https://web-production-d937.up.railway.app";
@@ -413,8 +422,12 @@
 
     async function sendQuery() {
       const q = buildQuery();
-      if (!q || !userId) {
-        showResponse("Error: Could not extract user ID from Telegram", "error");
+      if (!q) {
+        showResponse("❌ Select a report and period first", "error");
+        return;
+      }
+      if (!userId) {
+        showResponse("❌ No user ID. Open this link from your Telegram bot or enter your ID.", "error");
         return;
       }
 
