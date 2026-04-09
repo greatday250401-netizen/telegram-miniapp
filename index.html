@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Data Query</title>
+  <title>Query Builder</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
@@ -43,7 +43,6 @@
 
     .section { margin-bottom: 20px; }
 
-    /* Chip grid for query types */
     .chip-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -70,7 +69,6 @@
       border-color: var(--tg-btn);
     }
 
-    /* Period pills */
     .period-grid {
       display: flex;
       flex-wrap: wrap;
@@ -95,7 +93,6 @@
       color: var(--tg-btn-text);
     }
 
-    /* Optional filter row */
     .filter-row {
       display: flex;
       gap: 8px;
@@ -119,116 +116,84 @@
       font-weight: 600;
     }
 
-    /* Preview box */
-    .preview {
+    .divider {
+      height: 1px;
+      background: var(--tg-secondary-bg);
+      margin: 20px 0;
+    }
+
+    .query-box {
       background: var(--tg-secondary-bg);
       border-radius: 10px;
-      padding: 12px 14px;
+      padding: 14px;
       font-size: 14px;
-      color: var(--tg-hint);
-      min-height: 44px;
+      color: var(--tg-text);
+      min-height: 50px;
       display: flex;
       align-items: center;
+      margin-bottom: 12px;
+      border-left: 3px solid var(--tg-btn);
     }
 
-    .preview span {
-      color: var(--tg-text);
+    .query-box.empty {
+      color: var(--tg-hint);
       font-style: italic;
+      border-left-color: var(--tg-hint);
     }
 
-    /* Send button */
-    .send-btn {
-      width: 100%;
-      padding: 14px;
-      border-radius: 12px;
-      background: var(--tg-btn);
-      color: var(--tg-btn-text);
-      font-size: 16px;
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 14px;
       font-weight: 600;
       border: none;
       cursor: pointer;
-      margin-top: 8px;
       transition: opacity 0.15s ease;
+      text-align: center;
     }
 
-    .send-btn:disabled {
+    .btn-primary {
+      background: var(--tg-btn);
+      color: var(--tg-btn-text);
+    }
+
+    .btn-secondary {
+      background: var(--tg-secondary-bg);
+      color: var(--tg-text);
+      border: 1px solid var(--tg-hint);
+    }
+
+    .btn:disabled {
       opacity: 0.4;
       cursor: default;
     }
 
-    .send-btn:active:not(:disabled) {
+    .btn:active:not(:disabled) {
       opacity: 0.85;
     }
 
-    .divider {
-      height: 1px;
-      background: var(--tg-secondary-bg);
-      margin: 4px 0 20px;
-    }
-
-    /* Response display */
-    .response-box {
-      background: var(--tg-secondary-bg);
-      border-radius: 10px;
-      padding: 14px;
-      font-size: 14px;
-      color: var(--tg-text);
-      margin-top: 12px;
-      min-height: 60px;
-      border-left: 3px solid var(--tg-btn);
-    }
-
-    .response-box.loading {
-      color: var(--tg-hint);
-      font-style: italic;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .response-box.error {
-      border-left-color: #ff4444;
-      color: #ff4444;
-    }
-
-    .spinner {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      border: 2px solid var(--tg-hint);
-      border-top-color: var(--tg-btn);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* History section */
-    .history-item {
-      background: var(--tg-secondary-bg);
-      border-radius: 8px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
+    .feedback {
+      text-align: center;
       font-size: 12px;
-    }
-
-    .history-item .query {
-      font-weight: 600;
-      color: var(--tg-text);
-      margin-bottom: 4px;
-    }
-
-    .history-item .response {
       color: var(--tg-hint);
-      font-size: 11px;
+      margin-top: 8px;
+      height: 16px;
+    }
+
+    .feedback.success {
+      color: #31a24c;
     }
   </style>
 </head>
 <body>
 
-  <h2>What do you want to know?</h2>
+  <h2>📊 Query Builder</h2>
 
   <!-- REPORT TYPE -->
   <div class="section">
@@ -243,62 +208,37 @@
   </div>
 
   <!-- SPORT FILTER -->
-  <div class="section" id="filterSection" style="display:none">
+  <div class="section">
     <div class="section-label">Sport</div>
     <div class="filter-row" id="filterGrid"></div>
   </div>
 
   <!-- MARKET FILTER -->
-  <div class="section" id="marketSection" style="display:none">
+  <div class="section">
     <div class="section-label">Market</div>
     <div class="filter-row" id="marketGrid"></div>
   </div>
 
   <div class="divider"></div>
 
-  <!-- QUERY PREVIEW -->
+  <!-- QUERY DISPLAY -->
   <div class="section">
-    <div class="section-label">Query preview</div>
-    <div class="preview" id="preview">Select a report and period above</div>
+    <div class="section-label">Your query</div>
+    <div class="query-box empty" id="queryBox">Select a report and period</div>
   </div>
 
-  <!-- SEND -->
-  <button class="send-btn" id="sendBtn" disabled onclick="sendQuery()">Send</button>
-
-  <!-- RESPONSE -->
-  <div id="responseBox" style="display:none" class="response-box"></div>
-
-  <!-- HISTORY -->
-  <div id="historySection" style="display:none; margin-top: 20px;">
-    <div class="section-label">Recent queries</div>
-    <div id="history"></div>
+  <!-- BUTTONS -->
+  <div class="button-row">
+    <button class="btn btn-secondary" id="copyBtn" disabled onclick="copyQuery()">📋 Copy</button>
+    <button class="btn btn-primary" id="sendBtn" disabled onclick="sendToBot()">✈️ Send to Bot</button>
   </div>
+
+  <div class="feedback" id="feedback"></div>
 
   <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
-
-    // Extract user_id from Telegram initData
-    const initData = tg.initData;
-    const params = new URLSearchParams(initData);
-    const userStr = params.get('user');
-    let userId = userStr ? JSON.parse(userStr).id : null;
-
-    // Fallback for testing (when opened in browser, not Telegram)
-    if (!userId) {
-      const urlParams = new URLSearchParams(window.location.search);
-      userId = urlParams.get('user_id') || prompt("Enter your Telegram user ID (or click Cancel for demo)");
-      if (!userId) {
-        userId = Math.floor(Math.random() * 900000000) + 100000000; // Random demo ID
-      }
-    }
-
-    // ⚠️ UPDATE THIS with your backend URL ⚠️
-    const BACKEND_URL = "https://web-production-d937.up.railway.app";
-    // const BACKEND_URL = "http://localhost:5000";  // Local development
-
-    let queryHistory = [];
 
     // ── Config ── edit these to match your business ──────────────────────
     const REPORTS = [
@@ -319,11 +259,11 @@
       { label: "YTD",           value: "year to date" },
     ];
 
-    // Sport filter — applies to all reports
     const FILTERS = ["Overall", "Soccer", "Cricket"];
-
-    // Market filter — applies to all reports
     const MARKETS = ["All", "Market Odds", "Other Markets"];
+
+    // Your existing bot username (without @)
+    const BOT_USERNAME = "bob20260223bot";
     // ────────────────────────────────────────────────────────────────────
 
     let selectedReport = null;
@@ -364,7 +304,7 @@
           grid.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("selected"));
           fc.classList.add("selected");
           onSelect(f);
-          updatePreview();
+          updateQuery();
         };
         grid.appendChild(fc);
       });
@@ -377,26 +317,22 @@
       selectedFilter = "Overall";
       selectedMarket = null;
 
-      // Render sport filter
       renderFilterRow("filterGrid", FILTERS, "Overall", val => {
         selectedFilter = val === "Overall" ? "Overall" : val;
       });
-      document.getElementById("filterSection").style.display = "block";
 
-      // Render market filter
       renderFilterRow("marketGrid", MARKETS, "All", val => {
         selectedMarket = val === "All" ? null : val;
       });
-      document.getElementById("marketSection").style.display = "block";
 
-      updatePreview();
+      updateQuery();
     }
 
     function selectPeriod(p, el) {
       document.querySelectorAll(".pill").forEach(c => c.classList.remove("selected"));
       el.classList.add("selected");
       selectedPeriod = p.value;
-      updatePreview();
+      updateQuery();
     }
 
     function buildQuery() {
@@ -407,82 +343,79 @@
       return q;
     }
 
-    function updatePreview() {
+    function updateQuery() {
       const q = buildQuery();
-      const preview = document.getElementById("preview");
+      const queryBox = document.getElementById("queryBox");
+      const copyBtn = document.getElementById("copyBtn");
       const sendBtn = document.getElementById("sendBtn");
+
       if (q) {
-        preview.innerHTML = `<span>${q}</span>`;
+        queryBox.textContent = q;
+        queryBox.classList.remove("empty");
+        copyBtn.disabled = false;
         sendBtn.disabled = false;
       } else {
-        preview.innerHTML = "Select a report and period above";
+        queryBox.textContent = "Select a report and period";
+        queryBox.classList.add("empty");
+        copyBtn.disabled = true;
         sendBtn.disabled = true;
       }
+      clearFeedback();
     }
 
-    async function sendQuery() {
+    function copyQuery() {
       const q = buildQuery();
-      if (!q) {
-        showResponse("❌ Select a report and period first", "error");
-        return;
-      }
-      if (!userId) {
-        showResponse("❌ No user ID. Open this link from your Telegram bot or enter your ID.", "error");
-        return;
-      }
+      if (!q) return;
 
-      // Show loading state
-      showResponse(`<div class="spinner"></div> Sending query...`, "loading");
-      const sendBtn = document.getElementById("sendBtn");
-      sendBtn.disabled = true;
-
-      try {
-        const response = await fetch(`${BACKEND_URL}/query`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: q, user_id: userId })
+      // Try modern clipboard API
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(q).then(() => {
+          showFeedback("✅ Copied!", "success");
+        }).catch(() => {
+          fallbackCopy(q);
         });
-
-        const data = await response.json();
-
-        if (data.status === "success") {
-          showResponse(`📬 Bot responded:\n\n${data.response}`, "success");
-          addToHistory(q, data.response);
-        } else if (data.status === "timeout") {
-          showResponse("⏱️ No response from bot (timeout). Check your chat.", "error");
-          addToHistory(q, "No response (timeout)");
-        } else {
-          showResponse(`❌ Error: ${data.error}`, "error");
-          addToHistory(q, `Error: ${data.error}`);
-        }
-      } catch (err) {
-        showResponse(`❌ Connection error:\n${err.message}\n\nMake sure backend is running at: ${BACKEND_URL}`, "error");
-        addToHistory(q, `Error: ${err.message}`);
-      } finally {
-        sendBtn.disabled = false;
+      } else {
+        fallbackCopy(q);
       }
     }
 
-    function showResponse(text, type = "success") {
-      const box = document.getElementById("responseBox");
-      box.innerHTML = text;
-      box.className = `response-box ${type}`;
-      box.style.display = "block";
+    function fallbackCopy(text) {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      showFeedback("✅ Copied!", "success");
     }
 
-    function addToHistory(query, response) {
-      queryHistory.unshift({ q: query, r: response, time: new Date().toLocaleTimeString() });
-      if (queryHistory.length > 5) queryHistory.pop(); // Keep last 5
+    function sendToBot() {
+      const q = buildQuery();
+      if (!q) return;
 
-      const historyDiv = document.getElementById("historySection");
-      const historyList = document.getElementById("history");
-      historyList.innerHTML = queryHistory.map(item => `
-        <div class="history-item">
-          <div class="query">🔍 ${item.q}</div>
-          <div class="response">${item.time} — ${item.r.substring(0, 60)}${item.r.length > 60 ? "..." : ""}</div>
-        </div>
-      `).join("");
-      historyDiv.style.display = "block";
+      // Open the bot chat with a message pre-filled (user will see it and can edit)
+      const encodedQuery = encodeURIComponent(q);
+      const botUrl = `https://t.me/${BOT_USERNAME}?start=${encodedQuery}`;
+
+      // Use Telegram's openLink if available
+      if (tg.openLink) {
+        tg.openLink(botUrl, true);
+      } else {
+        window.open(botUrl, "_blank");
+      }
+
+      showFeedback("✈️ Opening @" + BOT_USERNAME + "...", "success");
+    }
+
+    function showFeedback(text, type = "info") {
+      const fb = document.getElementById("feedback");
+      fb.textContent = text;
+      fb.className = "feedback " + type;
+    }
+
+    function clearFeedback() {
+      document.getElementById("feedback").textContent = "";
+      document.getElementById("feedback").className = "feedback";
     }
   </script>
 </body>
