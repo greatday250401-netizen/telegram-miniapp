@@ -406,15 +406,27 @@
 
       // Send data back to the bot using Telegram WebApp API
       try {
-        if (tg && tg.sendData) {
-          tg.sendData(q);
-          showFeedback("✅ Query sent to bot!", "success");
-        } else {
-          showFeedback("❌ Telegram WebApp not available", "");
+        // Check if we're running in proper Telegram context
+        if (!window.Telegram || !window.Telegram.WebApp) {
+          showFeedback("⚠️ Open this from Telegram bot to send queries", "");
+          return;
         }
+
+        const webApp = window.Telegram.WebApp;
+
+        // Verify sendData is available
+        if (typeof webApp.sendData !== 'function') {
+          showFeedback("⚠️ Telegram WebApp API not ready", "");
+          return;
+        }
+
+        // Send the query data back to the bot
+        webApp.sendData(q);
+        showFeedback("✅ Query sent to bot!", "success");
+
       } catch(e) {
-        console.log("sendData error:", e);
-        showFeedback("❌ Error sending query: " + e.message, "");
+        console.error("sendData error:", e);
+        showFeedback("❌ Error: " + e.message, "");
       }
     }
 
