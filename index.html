@@ -404,33 +404,18 @@
       const q = buildQuery();
       if (!q) return;
 
-      // Create bot URL - try multiple formats
-      const encodedQuery = encodeURIComponent(q);
-      const botUrl = `https://t.me/${BOT_USERNAME}`;
-
-      // Try to open the bot chat
+      // Send data back to the bot using Telegram WebApp API
       try {
-        // Method 1: Use Telegram's openLink (works in Telegram WebApp)
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-          window.Telegram.WebApp.openLink(botUrl, true);
-          showFeedback("✈️ Opening @" + BOT_USERNAME + "...", "success");
-          return;
+        if (tg && tg.sendData) {
+          tg.sendData(q);
+          showFeedback("✅ Query sent to bot!", "success");
+        } else {
+          showFeedback("❌ Telegram WebApp not available", "");
         }
       } catch(e) {
-        console.log("openLink failed:", e);
+        console.log("sendData error:", e);
+        showFeedback("❌ Error sending query: " + e.message, "");
       }
-
-      // Method 2: Use window.location (fallback)
-      try {
-        window.location.href = botUrl;
-        showFeedback("✈️ Opening @" + BOT_USERNAME + "...", "success");
-        return;
-      } catch(e) {
-        console.log("window.location failed:", e);
-      }
-
-      // Method 3: Fallback - show URL and copy button
-      showFeedback("⚠️ Could not open bot automatically. Use Copy button to paste query.", "");
     }
 
     function showFeedback(text, type = "info") {
