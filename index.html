@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Query Builder</title>
+  <meta name="version" content="1.0.0" />
+  <title>Query Builder v1.0.0</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
@@ -189,11 +190,21 @@
     .feedback.success {
       color: #31a24c;
     }
+
+    .version {
+      position: fixed;
+      bottom: 8px;
+      right: 12px;
+      font-size: 10px;
+      color: var(--tg-hint);
+      opacity: 0.5;
+    }
   </style>
 </head>
 <body>
 
   <h2>📊 Query Builder</h2>
+  <div class="version">v1.0.0</div>
 
   <!-- REPORT TYPE -->
   <div class="section">
