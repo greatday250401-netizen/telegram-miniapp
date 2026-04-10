@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <meta name="version" content="1.0.0" />
-  <title>Query Builder v1.0.0</title>
+  <title>Query Builder</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
@@ -190,21 +189,11 @@
     .feedback.success {
       color: #31a24c;
     }
-
-    .version {
-      position: fixed;
-      bottom: 8px;
-      right: 12px;
-      font-size: 10px;
-      color: var(--tg-hint);
-      opacity: 0.5;
-    }
   </style>
 </head>
 <body>
 
   <h2>📊 Query Builder</h2>
-  <div class="version">v1.0.0</div>
 
   <!-- REPORT TYPE -->
   <div class="section">
@@ -404,30 +393,33 @@
       const q = buildQuery();
       if (!q) return;
 
-      // Send data back to the bot using Telegram WebApp API
+      // Create bot URL - try multiple formats
+      const encodedQuery = encodeURIComponent(q);
+      const botUrl = `https://t.me/${BOT_USERNAME}`;
+
+      // Try to open the bot chat
       try {
-        // Check if we're running in proper Telegram context
-        if (!window.Telegram || !window.Telegram.WebApp) {
-          showFeedback("⚠️ Open this from Telegram bot to send queries", "");
+        // Method 1: Use Telegram's openLink (works in Telegram WebApp)
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+          window.Telegram.WebApp.openLink(botUrl, true);
+          showFeedback("✈️ Opening @" + BOT_USERNAME + "...", "success");
           return;
         }
-
-        const webApp = window.Telegram.WebApp;
-
-        // Verify sendData is available
-        if (typeof webApp.sendData !== 'function') {
-          showFeedback("⚠️ Telegram WebApp API not ready", "");
-          return;
-        }
-
-        // Send the query data back to the bot
-        webApp.sendData(q);
-        showFeedback("✅ Query sent to bot!", "success");
-
       } catch(e) {
-        console.error("sendData error:", e);
-        showFeedback("❌ Error: " + e.message, "");
+        console.log("openLink failed:", e);
       }
+
+      // Method 2: Use window.location (fallback)
+      try {
+        window.location.href = botUrl;
+        showFeedback("✈️ Opening @" + BOT_USERNAME + "...", "success");
+        return;
+      } catch(e) {
+        console.log("window.location failed:", e);
+      }
+
+      // Method 3: Fallback - show URL and copy button
+      showFeedback("⚠️ Could not open bot automatically. Use Copy button to paste query.", "");
     }
 
     function showFeedback(text, type = "info") {
